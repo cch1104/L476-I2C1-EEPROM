@@ -21,12 +21,13 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "string.h"
+#define LED GPIO_PIN_5
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+char I2C_ADDRESS = 0xA0;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -56,7 +57,23 @@ static void MX_I2C1_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void WRITE(uint16_t MemLoc, uint8_t *pData, uint16_t len){
+	uint8_t data[5];
 
+	data[0]=(uint8_t) ((MemLoc & 0xFF00) >> 8);
+	data[1]=(uint8_t) (MemLoc & 0xFF);
+	memcpy(data+2, pData, len);
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS, data, len+2, HAL_MAX_DELAY);
+	while(HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS, 0, 0, HAL_MAX_DELAY) != HAL_OK);
+}
+
+void READ(uint16_t MemLoc, uint8_t *pData, uint16_t len){
+	uint8_t addr[2];
+	addr[0] =(uint8_t) ((MemLoc & 0xFF00) >> 8);
+	addr[1] =(uint8_t) (MemLoc & 0XFF);
+	HAL_I2C_Master_Transmit(&hi2c1, I2C_ADDRESS, addr, 2, HAL_MAX_DELAY);
+	HAL_I2C_Master_Receive(&hi2c1, I2C_ADDRESS, pData, len, HAL_MAX_DELAY);
+}
 /* USER CODE END 0 */
 
 /**
@@ -67,7 +84,9 @@ int main(void)
 {
 
   /* USER CODE BEGIN 1 */
-
+  int count, i;
+  char wmsg[]={'1','5'};
+  char rmsg[10];
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -90,11 +109,23 @@ int main(void)
   MX_GPIO_Init();
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
+  HAL_I2C_Init(&hi2c1);
+  WRITE(0x1000, (uint8_t*)wmsg, strlen(wmsg)+1);
+  HAL_Delay(5000);
+  READ(0x1000, (uint8_t*)rmsg, strlen(rmsg)+1);
+  count= 10*(rmsg[0] - '0')+ rmsg[1]-'0';
+
+  for(i=0; i<count; i++){
+	  HAL_GPIO_TogglePin(GPIOA, LED);
+	  HAL_Delay(1000);
+  }
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
+
   while (1)
   {
     /* USER CODE END WHILE */
